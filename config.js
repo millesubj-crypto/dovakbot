@@ -1,7 +1,7 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-export const DISCORD_TOKEN = process.env.MTQyNzYzMzk5NzM0MDc0MTcxNw.GfNdsS.340hAr-UaEJA7wak0uFw4OTabH6kiqVqJMbP_o;
+export const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 export const CLIENT_ID = process.env.1427633997340741717;
 export const GUILD_ID = process.env.1469692759823876098;
 export const ADMIN_USER_IDS = process.env.429792107620728833?.split(',') || [];
