@@ -1,0 +1,19 @@
+{
+  "name": "dovakbot",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "cron": "^2.3.2",
+    "discord.js": "^14.13.0",
+    "dotenv": "^16.1.4",
+    "express": "^4.18.2",
+    "node-cron": "^4.2.1",
+    "node-fetch": "^3.3.2",
+    "sqlite": "^4.1.2",
+    "sqlite3": "^5.1.6"
+  }
+}
