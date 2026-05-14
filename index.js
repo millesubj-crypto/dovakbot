@@ -55,14 +55,6 @@ const COLOR = {
 // ✅ flags: MessageFlags.Ephemeral (ephemeral: true deprecated)
 const EPH = { flags: MessageFlags.Ephemeral };
 
-// ===== 공통 헬퍼 =====
-// 버튼 컴포넌트가 없는 단순 응답용: defer → editReply
-async function deferAndReply(interaction, isPublic, embedOrFn) {
-  await interaction.deferReply(isPublic ? {} : EPH);
-  const embed = typeof embedOrFn === 'function' ? await embedOrFn() : embedOrFn;
-  await interaction.editReply({ embeds: [embed] });
-}
-
 // ===== Interaction 처리 =====
 client.on('interactionCreate', async (interaction) => {
   try {
@@ -118,12 +110,13 @@ client.on('interactionCreate', async (interaction) => {
 
     // ===== 슬롯 =====
     if (commandName === '슬롯') {
-      await interaction.deferReply();
       const bet = options.getInteger('베팅') ?? 100;
+      // ✅ 잔고 체크 먼저 → 오류 시 ephemeral, 통과 시 공개 응답
       if (bet <= 0 || bet > userData.balance) {
-        await interaction.editReply({ embeds: [new EmbedBuilder().setColor(COLOR.red).setDescription('❌ 베팅 금액 오류 (잔고 부족 또는 0 이하)')] });
+        await interaction.reply({ embeds: [new EmbedBuilder().setColor(COLOR.red).setDescription('❌ 베팅 금액 오류 (잔고 부족 또는 0 이하)')], ...EPH });
         return;
       }
+      await interaction.deferReply();
       await updateBalance(user.id, -bet, '슬롯 베팅');
 
       const slotSymbols = ['🍒','🍋','🍊','🍉','7️⃣','⭐'];
