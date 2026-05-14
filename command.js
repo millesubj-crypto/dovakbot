@@ -5,8 +5,7 @@ dotenv.config();
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
-const GUILD_IDS = process.env.GUILD_ID?.split(',').map(id => id.trim()) || [];
-const COMMAND_SCOPE = (process.env.COMMAND_SCOPE || 'global').trim().toLowerCase();
+const COMMAND_SCOPE = 'global';
 
 export const baseCommands = [
   new SlashCommandBuilder()
@@ -140,25 +139,28 @@ export const baseCommands = [
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 ];
 
+async function registerGlobalCommands(rest, body, reason = '') {
+  if (reason) console.warn(`⚠️ ${reason}`);
+  console.log('🔹 전역 슬래시 명령어 등록 중...');
+  await rest.put(
+    Routes.applicationCommands(CLIENT_ID),
+    { body }
+  );
+  console.log('✅ 전역 슬래시 명령어 등록 완료');
+}
+
 export async function registerCommands() {
-  if (!DISCORD_TOKEN || !CLIENT_ID || GUILD_IDS.length === 0) {
-    console.error('💥 DISCORD_TOKEN, CLIENT_ID, GUILD_ID 중 하나가 설정되지 않았습니다.');
+  if (!DISCORD_TOKEN || !CLIENT_ID) {
+    console.error('💥 DISCORD_TOKEN 또는 CLIENT_ID가 설정되지 않았습니다.');
     return;
   }
 
   const rest = new REST({ version: '10' }).setToken(DISCORD_TOKEN);
   const body = baseCommands.map(cmd => cmd.toJSON());
 
-  for (const guildId of GUILD_IDS) {
-    try {
-      console.log(`🔹 슬래시 명령어 등록 중... (서버: ${guildId})`);
-      await rest.put(
-        Routes.applicationGuildCommands(CLIENT_ID, guildId),
-        { body }
-      );
-      console.log(`✅ 슬래시 명령어 등록 완료 (서버: ${guildId})`);
-    } catch (err) {
-      console.error(`💥 명령어 등록 에러 (서버: ${guildId}):`, err);
-    }
-  }
+  await registerGlobalCommands(
+    rest,
+    body,
+    `COMMAND_SCOPE=${COMMAND_SCOPE}: 여러 서버에서 사용할 수 있도록 전역 명령어로만 등록합니다.`
+  );
 }
