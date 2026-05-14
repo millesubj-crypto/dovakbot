@@ -3,12 +3,10 @@ import { SlashCommandBuilder, REST, Routes, PermissionFlagsBits } from 'discord.
 import dotenv from 'dotenv';
 dotenv.config();
 
-// ===== 환경 변수 =====
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
 const GUILD_IDS = process.env.GUILD_ID?.split(',').map(id => id.trim()) || [];
 
-// ===== 기본 명령어 정의 =====
 export const baseCommands = [
   new SlashCommandBuilder()
     .setName('돈줘')
@@ -23,8 +21,9 @@ export const baseCommands = [
     .setDescription('슬롯머신을 돌립니다.')
     .addIntegerOption(opt =>
       opt.setName('베팅')
-        .setDescription('베팅 금액')
+        .setDescription('베팅 금액 (기본: 100)')
         .setRequired(false)
+        .setMinValue(1)
     ),
 
   new SlashCommandBuilder()
@@ -43,11 +42,14 @@ export const baseCommands = [
       opt.setName('베팅')
         .setDescription('베팅 금액')
         .setRequired(true)
+        .setMinValue(1)
     )
     .addIntegerOption(opt =>
       opt.setName('말번호')
         .setDescription('1~7 중 하나 선택')
         .setRequired(true)
+        .setMinValue(1)
+        .setMaxValue(7)
     ),
 
   new SlashCommandBuilder()
@@ -57,6 +59,7 @@ export const baseCommands = [
       opt.setName('베팅')
         .setDescription('베팅 금액')
         .setRequired(true)
+        .setMinValue(1)
     ),
 
   new SlashCommandBuilder()
@@ -66,17 +69,63 @@ export const baseCommands = [
       opt.setName('베팅')
         .setDescription('베팅 금액')
         .setRequired(true)
+        .setMinValue(1)
     )
     .addStringOption(opt =>
       opt.setName('선택')
-        .setDescription('플레이어 / 뱅커 / 타이')
+        .setDescription('플레이어 / 뱅커 / 타이 중 선택')
+        .setRequired(true)
+        .addChoices(
+          { name: '플레이어', value: '플레이어' },
+          { name: '뱅커', value: '뱅커' },
+          { name: '타이', value: '타이' }
+        )
+    ),
+
+  new SlashCommandBuilder()
+    .setName('복권결과')
+    .setDescription('오늘의 복권 당첨 결과를 즉시 발표합니다. (봇 관리자 전용)')
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+
+  // ✅ /골라 목록 → 옵션명을 "목록"으로 통일 (입력창에 "목록" 표시)
+  new SlashCommandBuilder()
+    .setName('골라')
+    .setDescription('항목들 중 하나를 랜덤으로 골라줍니다.')
+    .addStringOption(opt =>
+      opt.setName('목록')
+        .setDescription('쉼표로 구분 (예: 짜장면, 짬뽕, 볶음밥)')
         .setRequired(true)
     ),
 
-  // ✅ 관리자 전용 커맨드 — Discord 레벨에서 관리자에게만 표시/실행 가능
+  // ===== 봇 관리자 권한 관리 (디스코드 서버 관리자 전용) =====
+  new SlashCommandBuilder()
+    .setName('봇관리자추가')
+    .setDescription('선택한 유저에게 봇 관리자 권한을 부여합니다.')
+    .addUserOption(opt =>
+      opt.setName('대상')
+        .setDescription('봇 관리자로 지정할 유저')
+        .setRequired(true)
+    )
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+
+  new SlashCommandBuilder()
+    .setName('봇관리자제거')
+    .setDescription('선택한 유저의 봇 관리자 권한을 해제합니다.')
+    .addUserOption(opt =>
+      opt.setName('대상')
+        .setDescription('봇 관리자 권한을 해제할 유저')
+        .setRequired(true)
+    )
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+
+  new SlashCommandBuilder()
+    .setName('봇관리자목록')
+    .setDescription('현재 봇 관리자 목록을 확인합니다.')
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+
   new SlashCommandBuilder()
     .setName('관리자지급')
-    .setDescription('관리자가 유저에게 포인트를 지급합니다.')
+    .setDescription('봇 관리자가 유저에게 포인트를 지급합니다.')
     .addUserOption(opt =>
       opt.setName('대상')
         .setDescription('유저 선택')
@@ -87,11 +136,9 @@ export const baseCommands = [
         .setDescription('지급할 금액')
         .setRequired(true)
     )
-    // ✅ 0n = 아무 권한도 없는 유저에게 비활성화 → 서버 관리자만 볼 수 있음
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 ];
 
-// ===== 명령어 등록 함수 =====
 export async function registerCommands() {
   if (!DISCORD_TOKEN || !CLIENT_ID || GUILD_IDS.length === 0) {
     console.error('💥 DISCORD_TOKEN, CLIENT_ID, GUILD_ID 중 하나가 설정되지 않았습니다.');

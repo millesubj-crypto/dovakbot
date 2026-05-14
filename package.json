@@ -7,7 +7,6 @@
     "start": "node index.js"
   },
   "dependencies": {
-    "cron": "^2.3.2",
     "discord.js": "^14.13.0",
     "dotenv": "^16.1.4",
     "express": "^4.18.2",
