@@ -5,7 +5,6 @@ dotenv.config();
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
-const COMMAND_SCOPE = 'global';
 
 export const baseCommands = [
   new SlashCommandBuilder()
@@ -87,7 +86,6 @@ export const baseCommands = [
     .setDescription('오늘의 복권 당첨 결과를 즉시 발표합니다. (봇 관리자 전용)')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
-  // ✅ /골라 목록 → 옵션명을 "목록"으로 통일 (입력창에 "목록" 표시)
   new SlashCommandBuilder()
     .setName('골라')
     .setDescription('항목들 중 하나를 랜덤으로 골라줍니다.')
@@ -97,7 +95,6 @@ export const baseCommands = [
         .setRequired(true)
     ),
 
-  // ===== 봇 관리자 권한 관리 (디스코드 서버 관리자 전용) =====
   new SlashCommandBuilder()
     .setName('봇관리자추가')
     .setDescription('선택한 유저에게 봇 관리자 권한을 부여합니다.')
@@ -139,16 +136,6 @@ export const baseCommands = [
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 ];
 
-async function registerGlobalCommands(rest, body, reason = '') {
-  if (reason) console.warn(`⚠️ ${reason}`);
-  console.log('🔹 전역 슬래시 명령어 등록 중...');
-  await rest.put(
-    Routes.applicationCommands(CLIENT_ID),
-    { body }
-  );
-  console.log('✅ 전역 슬래시 명령어 등록 완료');
-}
-
 export async function registerCommands() {
   if (!DISCORD_TOKEN || !CLIENT_ID) {
     console.error('💥 DISCORD_TOKEN 또는 CLIENT_ID가 설정되지 않았습니다.');
@@ -158,9 +145,14 @@ export async function registerCommands() {
   const rest = new REST({ version: '10' }).setToken(DISCORD_TOKEN);
   const body = baseCommands.map(cmd => cmd.toJSON());
 
-  await registerGlobalCommands(
-    rest,
-    body,
-    `COMMAND_SCOPE=${COMMAND_SCOPE}: 여러 서버에서 사용할 수 있도록 전역 명령어로만 등록합니다.`
-  );
+  try {
+    console.log('🔹 전역 슬래시 명령어 등록 중...');
+    await rest.put(
+      Routes.applicationCommands(CLIENT_ID),
+      { body }
+    );
+    console.log('✅ 전역 슬래시 명령어 등록 완료 (반영까지 최대 1시간 소요)');
+  } catch (err) {
+    console.error('💥 명령어 등록 에러:', err);
+  }
 }
