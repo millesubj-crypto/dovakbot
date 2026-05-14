@@ -41,7 +41,42 @@ export async function initDB() {
     )
   `);
 
+  // bot_admins 테이블 (디스코드 서버 관리자가 부여한 봇 관리자)
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS bot_admins (
+      user_id TEXT PRIMARY KEY,
+      granted_by TEXT,
+      granted_at INTEGER
+    )
+  `);
+
   console.log('✅ DB 초기화 완료');
+}
+
+// 봇 관리자 여부 확인 (환경변수 ADMIN_USER_IDS 또는 DB bot_admins 둘 다 허용)
+export async function isBotAdmin(userId) {
+  const envAdmins = process.env.ADMIN_USER_IDS?.split(',').map(id => id.trim()) || [];
+  if (envAdmins.includes(userId)) return true;
+  const row = await db.get('SELECT 1 FROM bot_admins WHERE user_id = ?', userId);
+  return !!row;
+}
+
+// 봇 관리자 추가
+export async function addBotAdmin(userId, grantedBy) {
+  await db.run(
+    'INSERT OR IGNORE INTO bot_admins (user_id, granted_by, granted_at) VALUES (?, ?, ?)',
+    userId, grantedBy, Date.now()
+  );
+}
+
+// 봇 관리자 제거
+export async function removeBotAdmin(userId) {
+  await db.run('DELETE FROM bot_admins WHERE user_id = ?', userId);
+}
+
+// 봇 관리자 전체 목록
+export async function listBotAdmins() {
+  return await db.all('SELECT * FROM bot_admins ORDER BY granted_at ASC');
 }
 
 export async function safeDBRun(query, ...params) {

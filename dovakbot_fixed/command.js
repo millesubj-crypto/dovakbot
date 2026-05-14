@@ -62,7 +62,6 @@ export const baseCommands = [
         .setMinValue(1)
     ),
 
-  // ✅ 바카라 — 선택지를 choices로 고정하여 오타/미입력 방지 (골라 기능 핵심 수정)
   new SlashCommandBuilder()
     .setName('바카라')
     .setDescription('바카라를 플레이합니다.')
@@ -84,8 +83,49 @@ export const baseCommands = [
     ),
 
   new SlashCommandBuilder()
+    .setName('복권결과')
+    .setDescription('오늘의 복권 당첨 결과를 즉시 발표합니다. (봇 관리자 전용)')
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+
+  // ✅ /골라 목록 → 옵션명을 "목록"으로 통일 (입력창에 "목록" 표시)
+  new SlashCommandBuilder()
+    .setName('골라')
+    .setDescription('항목들 중 하나를 랜덤으로 골라줍니다.')
+    .addStringOption(opt =>
+      opt.setName('목록')
+        .setDescription('쉼표로 구분 (예: 짜장면, 짬뽕, 볶음밥)')
+        .setRequired(true)
+    ),
+
+  // ===== 봇 관리자 권한 관리 (디스코드 서버 관리자 전용) =====
+  new SlashCommandBuilder()
+    .setName('봇관리자추가')
+    .setDescription('선택한 유저에게 봇 관리자 권한을 부여합니다.')
+    .addUserOption(opt =>
+      opt.setName('대상')
+        .setDescription('봇 관리자로 지정할 유저')
+        .setRequired(true)
+    )
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+
+  new SlashCommandBuilder()
+    .setName('봇관리자제거')
+    .setDescription('선택한 유저의 봇 관리자 권한을 해제합니다.')
+    .addUserOption(opt =>
+      opt.setName('대상')
+        .setDescription('봇 관리자 권한을 해제할 유저')
+        .setRequired(true)
+    )
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+
+  new SlashCommandBuilder()
+    .setName('봇관리자목록')
+    .setDescription('현재 봇 관리자 목록을 확인합니다.')
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+
+  new SlashCommandBuilder()
     .setName('관리자지급')
-    .setDescription('관리자가 유저에게 포인트를 지급합니다.')
+    .setDescription('봇 관리자가 유저에게 포인트를 지급합니다.')
     .addUserOption(opt =>
       opt.setName('대상')
         .setDescription('유저 선택')
