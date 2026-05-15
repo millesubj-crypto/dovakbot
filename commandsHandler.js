@@ -1,14 +1,6 @@
-// commandsHandler.js
 import { EmbedBuilder } from 'discord.js';
+import { COLOR } from './colors.js';
 import { updateBalance, getUser } from './db.js';
-
-const COLOR = {
-  gold:  0xF1C40F,
-  green: 0x57F287,
-  red:   0xED4245,
-  blue:  0x5865F2,
-  gray:  0x2B2D31,
-};
 
 export const RACE_PAYOUT_MULTIPLIER = 5;
 export const horses = [
@@ -21,7 +13,6 @@ export const horses = [
   { name: '럭키 카구야',  emoji: '🐎' },
 ];
 
-// ===== 경마 =====
 export async function runRace(channel, bettors) {
   const trackLength = 20;
   let positions = new Array(horses.length).fill(0);
@@ -41,14 +32,10 @@ export async function runRace(channel, bettors) {
         const step = Math.random() < 0.8 ? (Math.random() < 0.4 ? 2 : 1) : 0;
         positions[i] = Math.min(positions[i] + step, trackLength);
       }
-
       const track = positions.map((p, i) => {
-        const left  = '·'.repeat(trackLength - p);
-        const right = '·'.repeat(p);
-        const num   = String(i + 1).padStart(2, ' ');
-        return `🏁${left}${horses[i].emoji}${right} ${num}.${horses[i].name}`;
+        const num = String(i + 1).padStart(2, ' ');
+        return `🏁${'·'.repeat(trackLength - p)}${horses[i].emoji}${'·'.repeat(p)} ${num}.${horses[i].name}`;
       }).join('\n');
-
       try {
         await msg.edit({
           embeds: [new EmbedBuilder()
@@ -70,8 +57,7 @@ export async function runRace(channel, bettors) {
     setTimeout(() => {
       if (!finished) {
         clearInterval(interval);
-        const maxPos = Math.max(...positions);
-        const winnerIdx = positions.indexOf(maxPos);
+        const winnerIdx = positions.indexOf(Math.max(...positions));
         announceResult(channel, bettors, winnerIdx, true).catch(() => {});
         resolve(winnerIdx);
       }
@@ -79,30 +65,25 @@ export async function runRace(channel, bettors) {
   });
 }
 
-// ===== 경마 결과 발표 =====
 async function announceResult(channel, bettors, winnerIdx, isTimeout) {
   const winnerName = `${horses[winnerIdx].emoji} **${horses[winnerIdx].name}** (${winnerIdx + 1}번)`;
   const titleSuffix = isTimeout ? ' — ⏱ 시간초과' : '';
 
   for (const [uid, b] of bettors.entries()) {
-    const isWinner = b.horseIndex === winnerIdx;
-
-    if (isWinner) {
+    if (b.horseIndex === winnerIdx) {
       const prize = b.bet * RACE_PAYOUT_MULTIPLIER;
       await updateBalance(uid, prize, `경마 승리${isTimeout ? '(시간초과)' : ''}`);
       const balance = (await getUser(uid)).balance;
-      const net = prize - b.bet; // 베팅액 이미 차감됐으므로 순수익 = 상금 - 베팅액
-
       await channel.send({
         content: `<@${uid}>`,
         embeds: [new EmbedBuilder()
           .setColor(COLOR.green)
           .setTitle(`🏆 경주 종료${titleSuffix} — 축하합니다!`)
           .addFields(
-            { name: '우승 말',  value: winnerName,                        inline: false },
-            { name: '수익',     value: `+${net.toLocaleString()}원`,       inline: true },
-            { name: '베팅',     value: `${b.bet.toLocaleString()}원`,      inline: true },
-            { name: '현재 잔고', value: `${balance.toLocaleString()}원`,   inline: true },
+            { name: '우승 말',   value: winnerName,                        inline: false },
+            { name: '수익',      value: `+${(prize - b.bet).toLocaleString()}원`, inline: true },
+            { name: '베팅',      value: `${b.bet.toLocaleString()}원`,      inline: true },
+            { name: '현재 잔고', value: `${balance.toLocaleString()}원`,    inline: true },
           )],
       });
     } else {
@@ -112,12 +93,12 @@ async function announceResult(channel, bettors, winnerIdx, isTimeout) {
         embeds: [new EmbedBuilder()
           .setColor(COLOR.red)
           .setTitle(`🏁 경주 종료${titleSuffix}`)
+          .setDescription('아쉽게도 낙마했습니다.')
           .addFields(
-            { name: '우승 말',  value: winnerName,                        inline: false },
-            { name: '손실',     value: `-${b.bet.toLocaleString()}원`,     inline: true },
-            { name: '현재 잔고', value: `${balance.toLocaleString()}원`,   inline: true },
-          )
-          .setDescription('아쉽게도 낙마했습니다.')],
+            { name: '우승 말',   value: winnerName,                    inline: false },
+            { name: '손실',      value: `-${b.bet.toLocaleString()}원`, inline: true },
+            { name: '현재 잔고', value: `${balance.toLocaleString()}원`, inline: true },
+          )],
       });
     }
   }

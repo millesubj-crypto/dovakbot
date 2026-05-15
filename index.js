@@ -1,8 +1,8 @@
-// ===== index.js =====
 import dotenv from 'dotenv';
 import express from 'express';
 import fetch from 'node-fetch';
 import { Client, GatewayIntentBits, Partials, EmbedBuilder, MessageFlags } from 'discord.js';
+import { COLOR } from './colors.js';
 import { initDB, getUser, updateBalance, canClaimDaily, updateClaim,
          isBotAdmin, addBotAdmin, removeBotAdmin, listBotAdmins } from './db.js';
 import { registerCommands } from './command.js';
@@ -18,8 +18,8 @@ process.on('unhandledRejection', (reason) => console.error('💥 Unhandled Rejec
 const TOKEN = process.env.DISCORD_TOKEN;
 const PORT = process.env.PORT || 10000;
 const KEEPALIVE_URL = process.env.KEEPALIVE_URL;
+const EPH = { flags: MessageFlags.Ephemeral };
 
-// ===== Express =====
 const app = express();
 app.get('/', (_, res) => res.send('봇 실행 중'));
 app.listen(PORT, () => console.log(`✅ 서버 실행: ${PORT}`));
@@ -30,32 +30,16 @@ if (KEEPALIVE_URL) {
   }, 1000 * 60 * 4);
 }
 
-// ===== Discord 클라이언트 =====
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent],
   partials: [Partials.Message, Partials.Channel, Partials.GuildMember],
 });
 
-// ✅ clientReady (v14 — 'ready' deprecated)
 client.once('clientReady', async () => {
   console.log(`🤖 로그인 완료: ${client.user?.tag}`);
   scheduleDailyLottery(client);
 });
 
-const COLOR = {
-  gold:   0xF1C40F,
-  green:  0x57F287,
-  red:    0xED4245,
-  blue:   0x5865F2,
-  gray:   0x2B2D31,
-  teal:   0x1ABC9C,
-  yellow: 0xFEE75C,
-};
-
-// ✅ flags: MessageFlags.Ephemeral (ephemeral: true deprecated)
-const EPH = { flags: MessageFlags.Ephemeral };
-
-// ===== Interaction 처리 =====
 client.on('interactionCreate', async (interaction) => {
   try {
     if (!interaction.isChatInputCommand()) return;
@@ -70,7 +54,6 @@ client.on('interactionCreate', async (interaction) => {
       return;
     }
 
-    // ===== 돈줘 =====
     if (commandName === '돈줘') {
       await interaction.deferReply(EPH);
       if (!(await canClaimDaily(user.id))) {
@@ -94,7 +77,6 @@ client.on('interactionCreate', async (interaction) => {
       return;
     }
 
-    // ===== 잔고 =====
     if (commandName === '잔고') {
       await interaction.deferReply(EPH);
       await interaction.editReply({
@@ -108,10 +90,8 @@ client.on('interactionCreate', async (interaction) => {
       return;
     }
 
-    // ===== 슬롯 =====
     if (commandName === '슬롯') {
       const bet = options.getInteger('베팅') ?? 100;
-      // ✅ 잔고 체크 먼저 → 오류 시 ephemeral, 통과 시 공개 응답
       if (bet <= 0 || bet > userData.balance) {
         await interaction.reply({ embeds: [new EmbedBuilder().setColor(COLOR.red).setDescription('❌ 베팅 금액 오류 (잔고 부족 또는 0 이하)')], ...EPH });
         return;
@@ -157,14 +137,12 @@ client.on('interactionCreate', async (interaction) => {
       return;
     }
 
-    // ===== 복권구매 =====
     if (commandName === '복권구매') {
       await interaction.deferReply(EPH);
       await buyLottery(interaction);
       return;
     }
 
-    // ===== 복권결과 (봇 관리자 전용) =====
     if (commandName === '복권결과') {
       await interaction.deferReply();
       if (!(await isBotAdmin(user.id))) {
@@ -175,7 +153,6 @@ client.on('interactionCreate', async (interaction) => {
       return;
     }
 
-    // ===== 블랙잭 (버튼 컴포넌트 — defer 없이 직접 reply) =====
     if (commandName === '블랙잭') {
       const bet = options.getInteger('베팅');
       if (!bet || bet <= 0 || bet > userData.balance) {
@@ -186,7 +163,6 @@ client.on('interactionCreate', async (interaction) => {
       return;
     }
 
-    // ===== 바카라 (버튼 컴포넌트 — defer 없이 직접 reply) =====
     if (commandName === '바카라') {
       const bet = options.getInteger('베팅');
       if (!bet || bet <= 0 || bet > userData.balance) {
@@ -197,7 +173,6 @@ client.on('interactionCreate', async (interaction) => {
       return;
     }
 
-    // ===== 경마 =====
     if (commandName === '경마') {
       const bet = options.getInteger('베팅');
       const horseNum = options.getInteger('말번호');
@@ -219,7 +194,7 @@ client.on('interactionCreate', async (interaction) => {
           .setColor(COLOR.blue)
           .setTitle('🏇 경마 시작!')
           .addFields(
-            { name: '베팅 말',  value: `${horseNum}번`, inline: true },
+            { name: '베팅 말',   value: `${horseNum}번`,            inline: true },
             { name: '베팅 금액', value: `${bet.toLocaleString()}원`, inline: true },
           )
           .setDescription('잠시 후 경주가 시작됩니다...')],
@@ -229,7 +204,6 @@ client.on('interactionCreate', async (interaction) => {
       return;
     }
 
-    // ===== 골라 =====
     if (commandName === '골라') {
       await interaction.deferReply();
       const input = options.getString('목록');
@@ -249,7 +223,6 @@ client.on('interactionCreate', async (interaction) => {
       return;
     }
 
-    // ===== 봇관리자추가 =====
     if (commandName === '봇관리자추가') {
       await interaction.deferReply(EPH);
       const target = options.getUser('대상');
@@ -266,7 +239,6 @@ client.on('interactionCreate', async (interaction) => {
       return;
     }
 
-    // ===== 봇관리자제거 =====
     if (commandName === '봇관리자제거') {
       await interaction.deferReply(EPH);
       const target = options.getUser('대상');
@@ -279,7 +251,6 @@ client.on('interactionCreate', async (interaction) => {
       return;
     }
 
-    // ===== 봇관리자목록 =====
     if (commandName === '봇관리자목록') {
       await interaction.deferReply(EPH);
       const admins = await listBotAdmins();
@@ -295,7 +266,6 @@ client.on('interactionCreate', async (interaction) => {
       return;
     }
 
-    // ===== 관리자지급 =====
     if (commandName === '관리자지급') {
       await interaction.deferReply(EPH);
       if (!(await isBotAdmin(user.id))) {
@@ -318,7 +288,6 @@ client.on('interactionCreate', async (interaction) => {
       return;
     }
 
-    // ===== 알 수 없는 명령어 =====
     await interaction.reply({ embeds: [new EmbedBuilder().setColor(COLOR.gray).setDescription('❓ 알 수 없는 명령어입니다.')], ...EPH });
 
   } catch (err) {
@@ -333,7 +302,6 @@ client.on('interactionCreate', async (interaction) => {
   }
 });
 
-// ===== DB 초기화 및 봇 로그인 =====
 (async () => {
   try {
     await initDB();

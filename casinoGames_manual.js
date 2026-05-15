@@ -1,19 +1,9 @@
-// casinoGames_manual.js
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, MessageFlags } from 'discord.js';
+import { COLOR } from './colors.js';
 import { getUser, updateBalance } from './db.js';
 
 const EPH = { flags: MessageFlags.Ephemeral };
 
-const COLOR = {
-  gold:   0xF1C40F,
-  green:  0x57F287,
-  red:    0xED4245,
-  blue:   0x5865F2,
-  gray:   0x2B2D31,
-  yellow: 0xFEE75C,
-};
-
-// ===== 카드/덱 =====
 function createDeck() {
   const suits = ['♠','♥','♦','♣'];
   const ranks = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
@@ -43,39 +33,32 @@ function handStr(h) {
   return h.map(c => `\`${c.rank}${c.suit}\``).join(' ');
 }
 
-// ===== 결과 Embed 공통 빌더 =====
 function resultEmbed({ title, bodyFields, outcome, bet, balance, footer }) {
   const cfg = {
     win:  { color: COLOR.green,  label: '🏆 승리!' },
     lose: { color: COLOR.red,    label: '💀 패배'  },
     draw: { color: COLOR.yellow, label: '⚖️ 무승부' },
   }[outcome];
-
   const net = outcome === 'win' ? bet : outcome === 'draw' ? 0 : -bet;
   const pnl = net > 0 ? `+${net.toLocaleString()}원` : net < 0 ? `${net.toLocaleString()}원` : '±0원';
-
   return new EmbedBuilder()
     .setColor(cfg.color)
     .setTitle(`${title}　　${cfg.label}`)
-    .addFields(
-      ...bodyFields,
+    .addFields(...bodyFields,
       { name: '수익', value: pnl, inline: true },
       { name: '잔고', value: `${balance.toLocaleString()}원`, inline: true },
     )
     .setFooter({ text: footer ?? `베팅: ${bet.toLocaleString()}원` });
 }
 
-// ===== 블랙잭 =====
-// index.js에서 deferReply 없이 직접 호출 → 내부에서 interaction.reply 사용
 export async function runBlackjackManual(interaction) {
   const user = interaction.user;
   const userData = await getUser(user.id);
   const bet = interaction.options.getInteger('베팅');
   const memberName = interaction.member?.displayName ?? user.username;
 
-  if (!bet || bet <= 0 || bet > userData.balance) {
+  if (!bet || bet <= 0 || bet > userData.balance)
     return interaction.reply({ embeds: [new EmbedBuilder().setColor(COLOR.red).setDescription('❌ 베팅 금액 오류')], ...EPH });
-  }
 
   await updateBalance(user.id, -bet, '블랙잭 베팅');
 
@@ -100,7 +83,6 @@ export async function runBlackjackManual(interaction) {
     )
     .setFooter({ text: `베팅: ${bet.toLocaleString()}원　│　버튼으로 진행하세요` });
 
-  // ✅ 버튼 embed는 reply로 전송 (deferReply 없음)
   const msg = await interaction.reply({ embeds: [progressEmbed()], components: [mkButtons()], fetchReply: true });
   const col = msg.createMessageComponentCollector({ filter: i => i.user.id === user.id, time: 120000 });
 
@@ -111,7 +93,6 @@ export async function runBlackjackManual(interaction) {
     if (outcome === 'draw') reward = bet;
     if (reward > 0) await updateBalance(user.id, reward, `블랙잭 ${outcome}`);
     const balance = (await getUser(user.id)).balance;
-
     await i.update({
       embeds: [resultEmbed({
         title: '🃏 블랙잭',
@@ -167,7 +148,6 @@ export async function runBlackjackManual(interaction) {
   });
 }
 
-// ===== 바카라 =====
 export async function runBaccaratManual(interaction) {
   const user = interaction.user;
   const userData = await getUser(user.id);
@@ -175,13 +155,10 @@ export async function runBaccaratManual(interaction) {
   const choice = (interaction.options.getString('선택') || '').trim();
   const memberName = interaction.member?.displayName ?? user.username;
 
-  const validChoices = ['플레이어', '뱅커', '타이'];
-  if (!validChoices.includes(choice)) {
+  if (!['플레이어','뱅커','타이'].includes(choice))
     return interaction.reply({ embeds: [new EmbedBuilder().setColor(COLOR.red).setDescription('⚠️ 플레이어 / 뱅커 / 타이 중 선택하세요.')], ...EPH });
-  }
-  if (!bet || bet <= 0 || bet > userData.balance) {
+  if (!bet || bet <= 0 || bet > userData.balance)
     return interaction.reply({ embeds: [new EmbedBuilder().setColor(COLOR.red).setDescription('❌ 베팅 금액 오류')], ...EPH });
-  }
 
   await updateBalance(user.id, -bet, '바카라 베팅');
 
@@ -204,7 +181,6 @@ export async function runBaccaratManual(interaction) {
     )
     .setFooter({ text: `베팅: ${bet.toLocaleString()}원　│　${memberName}님의 선택: ${choice}` });
 
-  // ✅ 버튼 embed는 reply로 전송
   const msg = await interaction.reply({ embeds: [progressEmbed()], components: [mkButtons()], fetchReply: true });
   const col = msg.createMessageComponentCollector({ filter: i => i.user.id === user.id, time: 120000 });
 
@@ -223,11 +199,10 @@ export async function runBaccaratManual(interaction) {
 
       if (reward > 0) await updateBalance(user.id, reward, `바카라 ${outcome}`);
       const balance = (await getUser(user.id)).balance;
-
       const net = outcome === 'win' ? reward - bet : outcome === 'draw' ? 0 : -bet;
       const pnl = net > 0 ? `+${net.toLocaleString()}원` : net < 0 ? `${net.toLocaleString()}원` : '±0원';
       const outcomeLabel = { win: '🏆 승리!', lose: '💀 패배', draw: '⚖️ 무승부' }[outcome];
-      const colorMap    = { win: COLOR.green, lose: COLOR.red, draw: COLOR.yellow };
+      const colorMap = { win: COLOR.green, lose: COLOR.red, draw: COLOR.yellow };
 
       await i.update({
         embeds: [new EmbedBuilder()
@@ -237,9 +212,9 @@ export async function runBaccaratManual(interaction) {
             { name: '👤 플레이어', value: `${handStr(pH)}\n**${pv}점**`, inline: true },
             { name: '🏦 뱅커',    value: `${handStr(bH)}\n**${bv}점**`, inline: true },
             { name: '\u200b',    value: '\u200b',                        inline: true },
-            { name: '승자',      value: `**${winner}**`, inline: true },
-            { name: '내 선택',   value: choice,          inline: true },
-            { name: '\u200b',    value: '\u200b',         inline: true },
+            { name: '승자',      value: `**${winner}**`,                 inline: true },
+            { name: '내 선택',   value: choice,                          inline: true },
+            { name: '\u200b',    value: '\u200b',                        inline: true },
             { name: '수익',      value: pnl,                             inline: true },
             { name: '잔고',      value: `${balance.toLocaleString()}원`, inline: true },
           )

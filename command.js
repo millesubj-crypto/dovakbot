@@ -1,4 +1,3 @@
-// ===== command.js =====
 import { SlashCommandBuilder, REST, Routes, PermissionFlagsBits } from 'discord.js';
 import dotenv from 'dotenv';
 dotenv.config();
@@ -33,6 +32,11 @@ export const baseCommands = [
         .setDescription('6개 번호 쉼표 구분 입력 (예: 3,7,12,22,34,45) — 미입력시 자동 생성')
         .setRequired(false)
     ),
+
+  new SlashCommandBuilder()
+    .setName('복권결과')
+    .setDescription('오늘의 복권 당첨 결과를 즉시 발표합니다. (봇 관리자 전용)')
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
   new SlashCommandBuilder()
     .setName('경마')
@@ -76,15 +80,10 @@ export const baseCommands = [
         .setRequired(true)
         .addChoices(
           { name: '플레이어', value: '플레이어' },
-          { name: '뱅커', value: '뱅커' },
-          { name: '타이', value: '타이' }
+          { name: '뱅커',     value: '뱅커'     },
+          { name: '타이',     value: '타이'     }
         )
     ),
-
-  new SlashCommandBuilder()
-    .setName('복권결과')
-    .setDescription('오늘의 복권 당첨 결과를 즉시 발표합니다. (봇 관리자 전용)')
-    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
   new SlashCommandBuilder()
     .setName('골라')
@@ -141,17 +140,12 @@ export async function registerCommands() {
     console.error('💥 DISCORD_TOKEN 또는 CLIENT_ID가 설정되지 않았습니다.');
     return;
   }
-
   const rest = new REST({ version: '10' }).setToken(DISCORD_TOKEN);
   const body = baseCommands.map(cmd => cmd.toJSON());
-
   try {
     console.log('🔹 전역 슬래시 명령어 등록 중...');
-    await rest.put(
-      Routes.applicationCommands(CLIENT_ID),
-      { body }
-    );
-    console.log('✅ 전역 슬래시 명령어 등록 완료 (반영까지 최대 1시간 소요)');
+    await rest.put(Routes.applicationCommands(CLIENT_ID), { body });
+    console.log('✅ 전역 슬래시 명령어 등록 완료');
   } catch (err) {
     console.error('💥 명령어 등록 에러:', err);
   }
